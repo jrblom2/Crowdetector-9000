@@ -1,4 +1,3 @@
-from pymavlink import mavutil
 from dash import Dash, html, dcc, Input, Output, State
 import time
 import math
@@ -70,16 +69,4 @@ def update_graph(n, figure):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
-
-# # Set up connection to vehicle
-# master = mavutil.mavlink_connection('udp:localhost:14445')
-
-# # Wait for the heartbeat message to ensure connection
-# master.wait_heartbeat()
-
-# while 1:
-#     msg = master.recv_match(type='GLOBAL_POSITION_INT', blocking=False)
-#     if msg is not None:
-#         print(msg.lat)
-#     time.sleep(0.01)
+    app.run(debug=True)

@@ -3,3 +3,4 @@ datasets/
 runs/
 videos/
 yolo11*
+__pycache__
