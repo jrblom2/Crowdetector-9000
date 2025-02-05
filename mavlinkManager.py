@@ -3,6 +3,7 @@ from utils import RunMode
 import datetime
 import os
 import json
+import time
 
 
 class mavlinkManager:
@@ -72,6 +73,7 @@ class mavlinkManager:
             line = self.readFile.readline()
             if line != "":
                 msg = json.loads(line)
+                time.sleep(0.3)
                 return msg
             else:
                 return None
