@@ -17,7 +17,7 @@ class frameScanner:
 
         return frame, results
 
-    def showFrame(frame):
+    def showFrame(self, frame):
         cv2.namedWindow('PlaneOfView', cv2.WINDOW_AUTOSIZE)
         cv2.imshow('PlaneOfView', frame)
         cv2.waitKey(1)

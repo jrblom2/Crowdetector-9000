@@ -5,7 +5,7 @@ import time
 
 from ultralytics import YOLO
 
-model = YOLO('yolo11x')
+model = YOLO('./runs/detect/train7/weights/best.pt')
 # model.train(
 #     data="datasets/aerialData2/data.yaml",
 #     epochs=100,
@@ -13,7 +13,7 @@ model = YOLO('yolo11x')
 #     batch=-1,
 # )
 
-cam = cv2.VideoCapture("./bikeCut.mp4")
+cam = cv2.VideoCapture("./videos/firstDrone.webm")
 while True:
     ret, frame = cam.read()
     if ret:

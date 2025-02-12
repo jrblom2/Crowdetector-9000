@@ -1,7 +1,9 @@
 from mavlinkManager import mavlinkManager
+from frameScanner import frameScanner
 from utils import RunMode
 import time
 import argparse
+import datetime
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -26,11 +28,19 @@ if __name__ == "__main__":
     if args.gpsDataFile is not None and args.inputVideo is not None:
         mode = RunMode.RECORDED
 
-    mavlink = mavlinkManager(14445, mode, args.gpsDataFile)
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    mavlink = mavlinkManager(14445, mode, timestamp, args.gpsDataFile)
+
     mavlink.confirmHeartbeat()
 
+    fsInterface = frameScanner(0, 'yolo11x')
+
     while 1:
-        msg = mavlink.readGPI()
+        msg = mavlink.getGPI()
         if msg is None:
-            break
+            print("No geo data!")
+            time.sleep(0.1)
+            continue
         print(msg)
+        frame, results = fsInterface.getIdentifiedFrame()
+        fsInterface.showFrame(frame)
