@@ -8,14 +8,19 @@ class frameScanner:
 
     def __init__(self, video, yoloModel, mode, timestamp):
         self.cam = cv2.VideoCapture(video)
-        self.width = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.width = 1920
+        self.height = 1080
+
+        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
 
         self.mode = mode
+        print("Size is: ", self.width, " x ", self.height)
         if self.mode is RunMode.LIVE:
             size = (self.width, self.height)
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             self.writer = cv2.VideoWriter(f"videos/capture_{timestamp}.mp4", fourcc, 30, size)
+            self.detectionWriter = cv2.VideoWriter(f"videos/detections_{timestamp}.mp4", fourcc, 30, size)
 
         self.model = YOLO(yoloModel)
 
@@ -24,16 +29,21 @@ class frameScanner:
 
         if self.mode is RunMode.LIVE:
             self.writer.release()
+            self.detectionWriter.release()
 
     def getIdentifiedFrame(self):
         ret, frame = self.cam.read()
-        if self.mode is RunMode.LIVE:
-            self.writer.write(frame)
+        results = None
+        detectionsFrame = None
         if ret:
             results = self.model.track(frame, persist=True, verbose=False)
-            frame = results[0].plot()
+            detectionsFrame = results[0].plot()
 
-        return frame, results
+        if self.mode is RunMode.LIVE:
+            self.writer.write(frame)
+            self.detectionWriter.write(detectionsFrame)
+
+        return ret, detectionsFrame, results
 
     def showFrame(self, frame):
         cv2.namedWindow('PlaneOfView', cv2.WINDOW_AUTOSIZE)

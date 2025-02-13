@@ -14,15 +14,15 @@ class mavlinkManager:
 
         self.runMode = mode
 
-        self.lastMessage = None
-        self.mavPoll = threading.Thread(target=self.pollGPI)
-        self.mavPoll.start()
-
         # If Live, open stream file to record. If recorded, open the data.
         if mode is RunMode.LIVE:
             self.writeFile = open(f"mavdumps/mavlink_{timestamp}.json", "w")
         else:
             self.readFile = open(file, "r")
+
+        self.lastMessage = None
+        self.mavPoll = threading.Thread(target=self.pollGPI)
+        self.mavPoll.start()
 
     def __del__(self):
         if hasattr(self, 'writeFile'):
@@ -31,15 +31,14 @@ class mavlinkManager:
             self.readFile.close()
 
     def confirmHeartbeat(self):
+        print("Checking heartbeat, make sure QGC is running or it is offline mode.")
         if self.runMode is RunMode.LIVE:
             self.connection.wait_heartbeat()
 
     def pollGPI(self):
         while True:
             if self.runMode is RunMode.LIVE:
-                msg = self.connection.recv_match(
-                    type='GLOBAL_POSITION_INT', blocking=True
-                )
+                msg = self.connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
 
                 # Get nice format for the dump, drop headers and such.
                 jsonKeys = [
@@ -54,11 +53,7 @@ class mavlinkManager:
                     'hdg',
                     '_timestamp',
                 ]
-                geoDump = {
-                    key: msg.__dict__[key]
-                    for key in jsonKeys
-                    if key in msg.__dict__
-                }
+                geoDump = {key: msg.__dict__[key] for key in jsonKeys if key in msg.__dict__}
                 self.writeFile.write(json.dumps(geoDump))
                 self.writeFile.write('\n')
                 self.writeFile.flush()
@@ -67,11 +62,19 @@ class mavlinkManager:
                 line = self.readFile.readline()
                 if line != "":
                     msg = json.loads(line)
-                    time.sleep(0.3)
+
+                    # Live mavlink updates messages at about 2 a second
+                    if self.lastMessage is not None:
+                        time.sleep(msg["_timestamp"] - self.lastMessage["_timestamp"])
                     self.lastMessage = msg
+                else:
+                    # Means we are at end of file
+                    return
+
+            print(self.lastMessage)
 
     def getGPI(self):
-        if self.lastMessage["lat"] == 0 and self.lastMessage["lon"] == 0:
+        if self.lastMessage is not None and self.lastMessage["lat"] == 0 and self.lastMessage["lon"] == 0:
             defualt = json.loads(
                 "{\"time_boot_ms\": 223087, \"lat\": 42.062252, \"lon\": -87.678276, \"alt\": 930, \"relative_alt\": 30, \"vx\": 0, \"vy\": 0, \"vz\": 0, \"hdg\": 0, \"_timestamp\": 1739383911.5852737}"
             )
