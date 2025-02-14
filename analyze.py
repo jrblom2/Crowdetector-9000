@@ -1,5 +1,6 @@
 from mavlinkManager import mavlinkManager
 from frameScanner import frameScanner
+from dataManager import pdm
 from utils import RunMode
 import time
 import argparse
@@ -32,6 +33,7 @@ if __name__ == "__main__":
         mode = RunMode.RECORDED
         videoStream = args.inputVideo
 
+    pdDataManager = pdm()
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     mavlink = mavlinkManager(14445, mode, timestamp, args.gpsDataFile)
 
@@ -44,11 +46,11 @@ if __name__ == "__main__":
 
     dataTimeout = 0
     while dataTimeout < 5:
+        # Get camera data
+        ret, frame = fsInterface.getFrame()
+
         # Where are we?
         msg = mavlink.getGPI()
-
-        # Get camera data
-        ret, frame, results = fsInterface.getIdentifiedFrame()
 
         if not ret or msg is None:
             print("No data in either frames or geo data!")
@@ -56,13 +58,17 @@ if __name__ == "__main__":
             time.sleep(1)
             continue
 
+        frame, results = fsInterface.getIdentifiedFrame(frame)
         detectionData = results[0].summary()
 
-        if False:
-            altitude = msg["relative_alt"]
-            planeLat = msg["lat"]
-            planeLon = msg["lon"]
+        altitude = msg["relative_alt"] / 1000
+        planeLat = msg["lat"] / 10000000
+        planeLon = msg["lon"] / 10000000
 
+        planeUpdate = {"id": "Plane", "lat": planeLat, "lon": planeLon, "alt": altitude, "time": time.time()}
+        pdDataManager.updatePositions(planeUpdate)
+
+        if False:
             # Camera info
             cameraSensorW = 0.00454
             cameraSensorH = 0.00340
@@ -81,31 +87,34 @@ if __name__ == "__main__":
                 # Camera is at a tilt from the ground, so GSD needs to be scaled
                 # by relative distance. Assuming camera is level horizontally, so
                 # just need to scale tilt in camera Y direction
-                box = detection["box"]
-                objectX = ((box["x2"] - box["x1"]) / 2) + box["x1"]
-                objectY = ((box["y2"] - box["y1"]) / 2) + box["y1"]
-                tanPhi = cameraPixelsize * (math.sqrt((objectY ^ 2 - cameraCenterY) ^ 2) / cameraFocalLength)
-                verticalPhi = math.atan(tanPhi)
-                adjustedGSDH = nadirGSDH * (1 / math.cos(cameraTilt - verticalPhi))
+                if detection["name"] == "person":
+                    box = detection["box"]
+                    objectX = ((box["x2"] - box["x1"]) / 2) + box["x1"]
+                    objectY = ((box["y2"] - box["y1"]) / 2) + box["y1"]
+                    tanPhi = cameraPixelsize * (math.sqrt((objectY**2 - cameraCenterY) ** 2) / cameraFocalLength)
+                    verticalPhi = math.atan(tanPhi)
+                    adjustedGSDH = nadirGSDH * (1 / math.cos(cameraTilt - verticalPhi))
 
-                # Distance camera center is projected forward
-                offsetCenterY = math.tan(cameraTilt) * altitude
+                    # Distance camera center is projected forward
+                    offsetCenterY = math.tan(cameraTilt) * altitude
 
-                # Positive value means shift left from camera POV
-                offsetXinM = (cameraCenterX - objectX) * nadirGSDW
+                    # Positive value means shift left from camera POV
+                    offsetXinM = (cameraCenterX - objectX) * nadirGSDW
 
-                # Positive value means shift down in camera POV
-                offsetYinM = ((cameraCenterY - objectY) * adjustedGSDH) + offsetCenterY
+                    # Positive value means shift down in camera POV
+                    offsetYinM = ((cameraCenterY - objectY) * adjustedGSDH) + offsetCenterY
 
-                rotation = msg["hdg"] * math.pi / 180
+                    rotation = msg["hdg"] * math.pi / 180
 
-                # At heading 0, camera Y is straight Longitude while X is latitude. Need to convert.
-                newXinMeters = offsetXinM * math.cos(rotation) - offsetYinM * math.sin(rotation)
-                newYinMeters = offsetXinM * math.sin(rotation) + offsetYinM * math.cos(rotation)
+                    # At heading 0, camera Y is straight Longitude while X is latitude. Need to convert.
+                    newXinMeters = offsetXinM * math.cos(rotation) - offsetYinM * math.sin(rotation)
+                    newYinMeters = offsetXinM * math.sin(rotation) + offsetYinM * math.cos(rotation)
 
-                # Simple meters to lat/lon, can be improved. 1 degree is about 111111 meters
-                objectLon = planeLon + (newXinMeters * (1 / 111111 * math.cos(planeLat * math.pi / 180)))
-                objectLat = planeLat + (newYinMeters * (1 / 111111.0))
+                    # Simple meters to lat/lon, can be improved. 1 degree is about 111111 meters
+                    objectLon = planeLon + (newXinMeters * (1 / 111111 * math.cos(planeLat * math.pi / 180)))
+                    objectLat = planeLat + (newYinMeters * (1 / 111111.0))
+                    print(objectLat)
+                    print(objectLon)
 
         fsInterface.showFrame(frame)
         dataTimeout = 0

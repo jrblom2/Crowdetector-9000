@@ -2,6 +2,8 @@ import cv2
 
 from ultralytics import YOLO
 from utils import RunMode
+import time
+import threading
 
 
 class frameScanner:
@@ -10,7 +12,11 @@ class frameScanner:
         self.cam = cv2.VideoCapture(video)
         self.width = 1920
         self.height = 1080
-
+        self.fps = self.cam.get(cv2.CAP_PROP_FPS)
+        self.frameTime = 1 / self.fps
+        self.lastFrame = None
+        self.hasFrame = False
+        self.startLoopTimestamp = None
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
 
@@ -23,6 +29,8 @@ class frameScanner:
             self.detectionWriter = cv2.VideoWriter(f"videos/detections_{timestamp}.mp4", fourcc, 30, size)
 
         self.model = YOLO(yoloModel)
+        self.framePoll = threading.Thread(target=self.pollFrames)
+        self.framePoll.start()
 
     def __del__(self):
         self.cam.release()
@@ -31,22 +39,35 @@ class frameScanner:
             self.writer.release()
             self.detectionWriter.release()
 
-    def getIdentifiedFrame(self):
-        ret, frame = self.cam.read()
+    def pollFrames(self):
+        while True:
+            startTime = time.time()
+            ret, frame = self.cam.read()
+            self.hasFrame = ret
+            if ret:
+                self.lastFrame = frame
+                if self.mode is RunMode.LIVE:
+                    self.writer.write(frame)
+                else:
+                    timeDif = time.time() - startTime
+                    if self.frameTime - timeDif > 0:
+                        time.sleep(self.frameTime - timeDif)
+
+    def getFrame(self):
+        return self.hasFrame, self.lastFrame
+
+    def getIdentifiedFrame(self, frame):
         results = None
         detectionsFrame = None
-        if ret:
-            results = self.model.track(frame, persist=True, verbose=False)
-            detectionsFrame = results[0].plot()
+        results = self.model.track(frame, persist=True, verbose=False)
+        detectionsFrame = results[0].plot()
 
         if self.mode is RunMode.LIVE:
-            self.writer.write(frame)
             self.detectionWriter.write(detectionsFrame)
 
-        return ret, detectionsFrame, results
+        return detectionsFrame, results
 
     def showFrame(self, frame):
-        cv2.namedWindow('PlaneOfView', cv2.WINDOW_AUTOSIZE)
         cv2.imshow('PlaneOfView', frame)
         cv2.waitKey(1)
 

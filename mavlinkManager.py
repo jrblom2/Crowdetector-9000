@@ -1,6 +1,5 @@
 from pymavlink import mavutil
 from utils import RunMode
-import os
 import json
 import time
 import threading
@@ -71,13 +70,7 @@ class mavlinkManager:
                     # Means we are at end of file
                     return
 
-            print(self.lastMessage)
+            # print(self.lastMessage)
 
     def getGPI(self):
-        if self.lastMessage is not None and self.lastMessage["lat"] == 0 and self.lastMessage["lon"] == 0:
-            defualt = json.loads(
-                "{\"time_boot_ms\": 223087, \"lat\": 42.062252, \"lon\": -87.678276, \"alt\": 930, \"relative_alt\": 30, \"vx\": 0, \"vy\": 0, \"vz\": 0, \"hdg\": 0, \"_timestamp\": 1739383911.5852737}"
-            )
-            defualt["_timestamp"] = self.lastMessage["_timestamp"]
-            return defualt
         return self.lastMessage
