@@ -48,7 +48,12 @@ class analyzer:
                 time.sleep(1)
                 continue
 
-            frame = frame[100:, 250:1670]
+            trimX1 = 250
+            trimX2 = 250
+            trimY1 = 100
+            trimY2 = 0
+
+            frame = frame[trimY1 : self.fsInterface.height - trimY2, trimX1 : self.fsInterface.width - trimX2]
             frame, results = self.fsInterface.getIdentifiedFrame(frame)
             detectionData = results[0].summary()
 
@@ -86,10 +91,10 @@ class analyzer:
                 # Camera is at a tilt from the ground, so GSD needs to be scaled
                 # by relative distance. Assuming camera is level horizontally, so
                 # just need to scale tilt in camera Y direction
-                if detection["name"] == "person" or detection['name'] == 'car':
+                if detection["name"] == "person":
                     box = detection["box"]
-                    objectX = ((box["x2"] - box["x1"]) / 2) + box["x1"]
-                    objectY = ((box["y2"] - box["y1"]) / 2) + box["y1"]
+                    objectX = ((box["x2"] - box["x1"]) / 2) + box["x1"] + trimX1
+                    objectY = ((box["y2"] - box["y1"]) / 2) + box["y1"] + trimY1
                     tanPhi = cameraPixelsize * (math.sqrt((objectY**2 - cameraCenterY) ** 2) / cameraFocalLength)
                     verticalPhi = math.atan(tanPhi)
                     adjustedGSDH = nadirGSDH * (1 / math.cos(cameraTilt - verticalPhi))

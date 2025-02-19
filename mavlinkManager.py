@@ -70,7 +70,7 @@ class mavlinkManager:
                     # Means we are at end of file
                     return
 
-            print(self.lastMessage)
+            # print(self.lastMessage)
 
     def getGPI(self):
         return self.lastMessage
