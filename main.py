@@ -8,12 +8,12 @@ import pandas as pd
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-g",
-        "--gpsDataFile",
+        "-mav",
+        "--mavDataFile",
         help="optional file containing containing mavlink data for a video",
     )
     parser.add_argument(
-        "-i",
+        "-video",
         "--inputVideo",
         help="optional file containing video matching mavlink data",
     )
@@ -23,14 +23,14 @@ if __name__ == "__main__":
     videoStream = 0  # set to 2/3 depending on which stream camera is coming in on
     gpsFile = ""
 
-    if (args.gpsDataFile is not None) ^ (args.inputVideo is not None):
+    if (args.mavDataFile is not None) ^ (args.inputVideo is not None):
         print("Either both optional arguments are required or neither.")
         exit()
 
-    if args.gpsDataFile is not None and args.inputVideo is not None:
+    if args.mavDataFile is not None and args.inputVideo is not None:
         mode = RunMode.RECORDED
         videoStream = args.inputVideo
-        gpsFile = args.gpsDataFile
+        gpsFile = args.mavDataFile
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 

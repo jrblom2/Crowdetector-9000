@@ -60,9 +60,10 @@ class analyzer:
             altitude = msg["relative_alt"] / 1000
             planeLat = msg["lat"] / 10000000
             planeLon = msg["lon"] / 10000000
+            planeHeading = msg['hdg'] / 100
 
             # Remove detections older than 2 sec and update plane coords
-            self.positions = self.positions[self.positions['time'] > time.time() - 2]
+            self.positions = self.positions[self.positions['time'] > time.time() - 1]
             planeUpdate = {
                 "id": "Plane",
                 "lat": planeLat,
@@ -76,9 +77,9 @@ class analyzer:
             # Camera info
             cameraSensorW = 0.00454
             cameraSensorH = 0.00340
-            cameraPixelsize = 0.00000314814  # This number might be off
+            cameraPixelsize = 0.00000314814
             cameraFocalLength = 0.0021
-            cameraTilt = np.pi / 4
+            cameraTilt = 63 * (math.pi / 180)
 
             # Basic Ground sample distance, how far in M each pixel is
             nadirGSDH = (altitude * cameraSensorH) / (cameraFocalLength * self.fsInterface.height)
@@ -87,43 +88,66 @@ class analyzer:
             cameraCenterX = self.fsInterface.width / 2
             cameraCenterY = self.fsInterface.height / 2
 
-            for detection in detectionData:
+            for i, detection in enumerate(detectionData):
                 # Camera is at a tilt from the ground, so GSD needs to be scaled
                 # by relative distance. Assuming camera is level horizontally, so
                 # just need to scale tilt in camera Y direction
-                if detection["name"] == "person":
+                if detection["name"] == "car" or detection["name"] == "person":
                     box = detection["box"]
                     objectX = ((box["x2"] - box["x1"]) / 2) + box["x1"] + trimX1
                     objectY = ((box["y2"] - box["y1"]) / 2) + box["y1"] + trimY1
-                    tanPhi = cameraPixelsize * (math.sqrt((objectY**2 - cameraCenterY) ** 2) / cameraFocalLength)
+
+                    tanPhi = cameraPixelsize * ((objectY - cameraCenterY) / cameraFocalLength)
                     verticalPhi = math.atan(tanPhi)
-                    adjustedGSDH = nadirGSDH * (1 / math.cos(cameraTilt - verticalPhi))
+
+                    totalAngle = cameraTilt - verticalPhi
+                    if totalAngle > 1.57:
+                        totalAngle = 1.57
+                    adjustedGSDH = nadirGSDH * (1 / math.cos(totalAngle))
+                    adjustedGSDW = nadirGSDW * (1 / math.cos(totalAngle))
 
                     # Distance camera center is projected forward
                     offsetCenterY = math.tan(cameraTilt) * altitude
 
                     # Positive value means shift left from camera POV
-                    offsetXinM = (cameraCenterX - objectX) * nadirGSDW
+                    offsetYInPlaneFrame = (cameraCenterX - objectX) * adjustedGSDW
 
-                    # Positive value means shift down in camera POV
-                    offsetYinM = ((cameraCenterY - objectY) * adjustedGSDH) + offsetCenterY
+                    # Positive value means shift up in camera POV
+                    offsetXInPlaneFrame = ((cameraCenterY - objectY) * adjustedGSDH) + offsetCenterY
+                    # print("offset center ", offsetCenterY, " offset y ", ((cameraCenterY - objectY) * adjustedGSDH))
 
-                    rotation = msg["hdg"] * math.pi / 180
+                    # north is hdg value of 0/360, convert to normal radians with positive
+                    # being counter clockwise
+                    rotation = (90 - planeHeading) * (math.pi / 180)
 
-                    # At heading 0, camera Y is straight Longitude while X is latitude. Need to convert.
-                    newXinMeters = offsetXinM * math.cos(rotation) - offsetYinM * math.sin(rotation)
-                    newYinMeters = offsetXinM * math.sin(rotation) + offsetYinM * math.cos(rotation)
+                    # Plane is rotated around world frame by heading, so rotate camera detection back
+                    worldXinMeters = offsetXInPlaneFrame * math.cos(rotation) - offsetYInPlaneFrame * math.sin(rotation)
+                    worldYinMeters = offsetXInPlaneFrame * math.sin(rotation) + offsetYInPlaneFrame * math.cos(rotation)
 
                     # Simple meters to lat/lon, can be improved. 1 degree is about 111111 meters
-                    objectLon = planeLon + (newXinMeters * (1 / 111111 * math.cos(planeLat * math.pi / 180)))
-                    objectLat = planeLat + (newYinMeters * (1 / 111111.0))
+                    objectLon = planeLon + (worldXinMeters * (1 / 111111 * math.cos(planeLat * math.pi / 180)))
+                    objectLat = planeLat + (worldYinMeters * (1 / 111111.0))
 
                     # update
                     if 'track_id' in detection:
                         name = detection['name'] + str(detection['track_id'])
                     else:
-                        name = detection['name']
+                        name = detection['name'] + str(i)
 
+                    print(name)
+                    print("objectX ", objectX)
+                    print("objectY ", objectY)
+                    print("offset center ", offsetCenterY)
+                    print("scaling factor ", 1 / math.cos(totalAngle))
+                    print("adjustedGSDW ", adjustedGSDW)
+                    print("adjustedGSDH ", adjustedGSDH)
+                    print("vertical offset ", verticalPhi * 180 / math.pi)
+                    print("total angle", totalAngle * 180 / math.pi)
+                    print("heading ", planeHeading)
+                    print("rotation ", rotation)
+                    print("offset plane y ", offsetYInPlaneFrame, " offset plane x", offsetXInPlaneFrame)
+                    print("offset in lon ", worldXinMeters, " offset in lat ", worldYinMeters)
+                    print()
                     if detection['name'] == 'person':
                         color = 'red'
                     if detection['name'] == 'car':

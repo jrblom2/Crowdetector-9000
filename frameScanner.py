@@ -19,10 +19,12 @@ class frameScanner:
         self.startLoopTimestamp = None
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        self.waitTime = 100000
 
         self.mode = mode
         print("Size is: ", self.width, " x ", self.height)
         if self.mode is RunMode.LIVE:
+            self.waitTime = 1
             size = (self.width, self.height)
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             self.writer = cv2.VideoWriter(f"videos/capture_{timestamp}.mp4", fourcc, 30, size)
@@ -69,7 +71,7 @@ class frameScanner:
 
     def showFrame(self, frame):
         cv2.imshow('PlaneOfView', frame)
-        cv2.waitKey(1)
+        cv2.waitKey(self.waitTime)
 
     def trainModel(self, data, epochs, patience, batch=-1):
         self.model.train(

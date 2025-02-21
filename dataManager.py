@@ -55,7 +55,3 @@ class dataVisualizer:
         fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         fig.update_layout(uirevision='same')
         return fig
-
-
-if __name__ == '__main__':
-    myPdm = pdm()

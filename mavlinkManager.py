@@ -38,9 +38,11 @@ class mavlinkManager:
         while True:
             if self.runMode is RunMode.LIVE:
                 msg = self.connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
+                attMsg = self.connection.recv_match(type='ATTITUDE', blocking=True)
+                print(msg.__dict__)
 
                 # Get nice format for the dump, drop headers and such.
-                jsonKeys = [
+                geoJsonKeys = [
                     'time_boot_ms',
                     'lat',
                     'lon',
@@ -52,7 +54,13 @@ class mavlinkManager:
                     'hdg',
                     '_timestamp',
                 ]
-                geoDump = {key: msg.__dict__[key] for key in jsonKeys if key in msg.__dict__}
+                attJsonKeys = [
+                    'roll',
+                    'pitch',
+                    'yaw',
+                ]
+                geoDump = {key: msg.__dict__[key] for key in geoJsonKeys if key in msg.__dict__}
+                geoDump.update({key: attMsg.__dict__[key] for key in attJsonKeys if key in attMsg.__dict__})
                 self.writeFile.write(json.dumps(geoDump))
                 self.writeFile.write('\n')
                 self.writeFile.flush()
