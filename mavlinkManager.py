@@ -8,6 +8,7 @@ import threading
 class mavlinkManager:
 
     def __init__(self, port, mode, timestamp, file=None):
+        self.stopSignal = False
         # Set up connection to vehicle
         self.connection = mavutil.mavlink_connection(f'udp:localhost:{port}')
 
@@ -23,7 +24,9 @@ class mavlinkManager:
         self.mavPoll = threading.Thread(target=self.pollGPI)
         self.mavPoll.start()
 
-    def __del__(self):
+    def shutdown(self):
+        self.stopSignal = True
+        self.mavPoll.join()
         if hasattr(self, 'writeFile'):
             self.writeFile.close()
         if hasattr(self, 'readFile'):
@@ -35,11 +38,13 @@ class mavlinkManager:
             self.connection.wait_heartbeat()
 
     def pollGPI(self):
-        while True:
+        while True and not self.stopSignal:
             if self.runMode is RunMode.LIVE:
-                msg = self.connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
-                attMsg = self.connection.recv_match(type='ATTITUDE', blocking=True)
-                print(msg.__dict__)
+                msg = self.connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True, timeout=1)
+                attMsg = self.connection.recv_match(type='ATTITUDE', blocking=True, timeout=1)
+
+                if msg is None or attMsg is None:
+                    continue
 
                 # Get nice format for the dump, drop headers and such.
                 geoJsonKeys = [
@@ -77,8 +82,7 @@ class mavlinkManager:
                 else:
                     # Means we are at end of file
                     return
-
-            # print(self.lastMessage)
+        print("closing mav stream")
 
     def getGPI(self):
         return self.lastMessage

@@ -9,6 +9,8 @@ import threading
 class frameScanner:
 
     def __init__(self, video, yoloModel, mode, timestamp):
+        self.stopSignal = False
+
         self.cam = cv2.VideoCapture(video)
         self.width = 1920
         self.height = 1080
@@ -34,15 +36,17 @@ class frameScanner:
         self.framePoll = threading.Thread(target=self.pollFrames)
         self.framePoll.start()
 
-    def __del__(self):
+    def shutdown(self):
+        self.stopSignal = True
         self.cam.release()
+        self.framePoll.join()
 
         if self.mode is RunMode.LIVE:
             self.writer.release()
             self.detectionWriter.release()
 
     def pollFrames(self):
-        while True:
+        while True and not self.stopSignal:
             startTime = time.time()
             ret, frame = self.cam.read()
             self.hasFrame = ret
@@ -54,6 +58,7 @@ class frameScanner:
                     timeDif = time.time() - startTime
                     if self.frameTime - timeDif > 0:
                         time.sleep(self.frameTime - timeDif)
+        print("closing video stream")
 
     def getFrame(self):
         return self.hasFrame, self.lastFrame

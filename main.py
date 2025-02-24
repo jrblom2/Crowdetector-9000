@@ -2,6 +2,9 @@ from analyze import analyzer
 from dataManager import dataVisualizer
 from utils import RunMode
 import argparse
+import signal
+import sys
+import threading
 import datetime
 import pandas as pd
 
@@ -20,7 +23,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mode = RunMode.LIVE
-    videoStream = 0  # set to 2/3 depending on which stream camera is coming in on
+    videoStream = 2  # set to 2/3 depending on which stream camera is coming in on
     gpsFile = ""
 
     if (args.mavDataFile is not None) ^ (args.inputVideo is not None):
@@ -35,5 +38,14 @@ if __name__ == "__main__":
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     anz = analyzer(timestamp, mode, gpsFile, videoStream)
+
+    def stopper(signal, frame):
+        print("Sending stop signal")
+        anz.mavlink.shutdown()
+        anz.fsInterface.shutdown()
+        anz.shutdown()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, stopper)
 
     dataVis = dataVisualizer(anz)
