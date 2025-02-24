@@ -40,6 +40,7 @@ if __name__ == "__main__":
     anz = analyzer(timestamp, mode, gpsFile, videoStream)
 
     def stopper(signal, frame):
+        print()
         print("Sending stop signal")
         anz.mavlink.shutdown()
         anz.fsInterface.shutdown()
