@@ -23,9 +23,6 @@ class analyzer:
         self.mavlink = mavlinkManager(14445, mode, timestamp, videoDuration)
 
         print("Run mode is: ", mode.name)
-        self.mavlink.confirmHeartbeat()
-
-        print("Found heartbeat.")
 
         self.analyzeThread = threading.Thread(target=self.analyzeLoop)
         self.analyzeThread.start()
@@ -56,7 +53,7 @@ class analyzer:
             attMsg = self.mavlink.getATT()
 
             if not ret or geoMsg is None or attMsg is None:
-                print("No data in either frames or geo data!")
+                print("No data in either frames or mav data!")
                 dataTimeout += 1
                 time.sleep(1)
                 continue

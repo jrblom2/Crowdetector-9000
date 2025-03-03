@@ -59,7 +59,7 @@ class mavlinkManager:
 
         self.lastGeo = None
         self.lastAtt = None
-        self.mavPoll = threading.Thread(target=self.pollGPI)
+        self.mavPoll = threading.Thread(target=self.pollMav)
         self.mavPoll.start()
 
     def shutdown(self):
@@ -73,7 +73,7 @@ class mavlinkManager:
         if self.runMode is RunMode.LIVE:
             self.connection.wait_heartbeat()
 
-    def pollGPI(self):
+    def pollMav(self):
         i = 0
         lastMessage = None
 

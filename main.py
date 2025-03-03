@@ -4,9 +4,7 @@ from utils import RunMode
 import argparse
 import signal
 import sys
-import threading
 import datetime
-import pandas as pd
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -18,14 +16,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mode = RunMode.LIVE
-    videoStream = 0  # set to 2/3 depending on which stream camera is coming in on
-    gpsFile = ""
+    videoStream = 2  # set to 2/3 depending on which stream camera is coming in on
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     if args.timestamp is not None:
         mode = RunMode.RECORDED
-        videoStream = "videos/capture_" + args.timestamp + ".mp4"
-
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        videoStream = f"videos/capture_{args.timestamp}.mp4"
+        timestamp = args.timestamp
 
     anz = analyzer(timestamp, mode, videoStream)
 
