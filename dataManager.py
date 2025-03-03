@@ -1,9 +1,5 @@
 from dash import Dash, html, dcc, Input, Output, State
-import time
-import math
-import pandas as pd
 import plotly.graph_objects as go
-import threading
 import logging
 
 

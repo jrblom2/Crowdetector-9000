@@ -18,7 +18,8 @@ class frameScanner:
         self.frameTime = 1 / self.fps
         self.lastFrame = None
         self.hasFrame = False
-        self.startLoopTimestamp = None
+        print("FPS is: ", self.fps)
+
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.waitTime = 100000
@@ -29,8 +30,10 @@ class frameScanner:
             self.waitTime = 1
             size = (self.width, self.height)
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.writer = cv2.VideoWriter(f"videos/capture_{timestamp}.mp4", fourcc, 30, size)
-            self.detectionWriter = cv2.VideoWriter(f"videos/detections_{timestamp}.mp4", fourcc, 30, size)
+            self.writer = cv2.VideoWriter(f"videos/capture_{timestamp}.mp4", fourcc, self.fps, size)
+            self.detectionWriter = cv2.VideoWriter(f"videos/detections_{timestamp}.mp4", fourcc, self.fps, size)
+        else:
+            self.duration = int(self.cam.get(cv2.CAP_PROP_FRAME_COUNT)) / self.fps
 
         self.model = YOLO(yoloModel)
         self.framePoll = threading.Thread(target=self.pollFrames)
@@ -46,7 +49,7 @@ class frameScanner:
             self.detectionWriter.release()
 
     def pollFrames(self):
-        while True and not self.stopSignal:
+        while not self.stopSignal:
             startTime = time.time()
             ret, frame = self.cam.read()
             self.hasFrame = ret

@@ -11,33 +11,23 @@ import pandas as pd
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-mav",
-        "--mavDataFile",
-        help="optional file containing containing mavlink data for a video",
-    )
-    parser.add_argument(
-        "-video",
-        "--inputVideo",
-        help="optional file containing video matching mavlink data",
+        "-t",
+        "--timestamp",
+        help="optional timestamp signaling that we should play back from files",
     )
     args = parser.parse_args()
 
     mode = RunMode.LIVE
-    videoStream = 2  # set to 2/3 depending on which stream camera is coming in on
+    videoStream = 0  # set to 2/3 depending on which stream camera is coming in on
     gpsFile = ""
 
-    if (args.mavDataFile is not None) ^ (args.inputVideo is not None):
-        print("Either both optional arguments are required or neither.")
-        exit()
-
-    if args.mavDataFile is not None and args.inputVideo is not None:
+    if args.timestamp is not None:
         mode = RunMode.RECORDED
-        videoStream = args.inputVideo
-        gpsFile = args.mavDataFile
+        videoStream = "videos/capture_" + args.timestamp + ".mp4"
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    anz = analyzer(timestamp, mode, gpsFile, videoStream)
+    anz = analyzer(timestamp, mode, videoStream)
 
     def stopper(signal, frame):
         print()
