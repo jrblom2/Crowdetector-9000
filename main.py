@@ -4,6 +4,7 @@ from utils import RunMode
 import argparse
 import signal
 import sys
+import time
 import datetime
 
 if __name__ == "__main__":
@@ -28,10 +29,10 @@ if __name__ == "__main__":
 
     def stopper(signal, frame):
         print()
-        print("Sending stop signal")
+        print(f"Sending stop signal at {time.time()}")
         anz.mavlink.shutdown()
-        anz.fsInterface.shutdown()
         anz.shutdown()
+        anz.fsInterface.shutdown()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, stopper)

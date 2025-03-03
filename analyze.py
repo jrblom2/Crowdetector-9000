@@ -44,6 +44,7 @@ class analyzer:
 
     def analyzeLoop(self):
         dataTimeout = 0
+        hasStartedRecord = False
         while dataTimeout < 5 and not self.stopSignal:
             # Get camera data
             ret, frame = self.fsInterface.getFrame()
@@ -57,6 +58,12 @@ class analyzer:
                 dataTimeout += 1
                 time.sleep(1)
                 continue
+
+            if not hasStartedRecord:
+                self.mavlink.readyToRecord = True
+                self.fsInterface.readyToRecord = True
+                print(f"Started recording at: {time.time()}")
+                hasStartedRecord = True
 
             doDetect = False
             if doDetect:

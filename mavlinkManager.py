@@ -59,6 +59,7 @@ class mavlinkManager:
 
         self.lastGeo = None
         self.lastAtt = None
+        self.readyToRecord = False
         self.mavPoll = threading.Thread(target=self.pollMav)
         self.mavPoll.start()
 
@@ -81,21 +82,21 @@ class mavlinkManager:
         while not self.stopSignal:
             if self.runMode is RunMode.LIVE:
                 msg = self.connection.recv_msg()
-
+                dump = None
                 if msg is not None:
                     if msg.get_type() == "GLOBAL_POSITION_INT":
-                        geoDump = {key: msg.__dict__[key] for key in geoJsonKeys if key in msg.__dict__}
-                        self.lastGeo = geoDump
-                        self.writeFile.write(json.dumps(geoDump))
-                        self.writeFile.write('\n')
-                        self.writeFile.flush()
+                        dump = {key: msg.__dict__[key] for key in geoJsonKeys if key in msg.__dict__}
+                        self.lastGeo = dump
                     if msg.get_type() == "ATTITUDE":
-                        attDump = {key: msg.__dict__[key] for key in attJsonKeys if key in msg.__dict__}
-                        self.lastAtt = attDump
-                        self.writeFile.write(json.dumps(attDump))
+                        dump = {key: msg.__dict__[key] for key in attJsonKeys if key in msg.__dict__}
+                        self.lastAtt = dump
+
+                    if dump is not None and self.readyToRecord:
+                        self.writeFile.write(json.dumps(dump))
                         self.writeFile.write('\n')
                         self.writeFile.flush()
                     msg = None
+
             else:
                 msg = self.mavLines[i]
 

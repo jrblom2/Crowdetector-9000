@@ -4,8 +4,6 @@ from ultralytics import YOLO
 from utils import RunMode
 import time
 import threading
-import signal
-import sys
 import random
 
 
@@ -16,6 +14,9 @@ class frameScanner:
         self.timestamp = timestamp
 
         self.cam = cv2.VideoCapture(video)
+        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
         self.width = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = self.cam.get(cv2.CAP_PROP_FPS)
@@ -40,12 +41,13 @@ class frameScanner:
             self.waitTime = 1
             # self.detectionWriter = cv2.VideoWriter(f"videos/detections_{timestamp}.mp4", fourcc, self.fps, size)
             self.frameBuffer = []
+            self.readyToRecord = False
             self.frameWrite = threading.Thread(target=self.writeFrames)
             self.frameWrite.start()
         else:
             self.duration = int(self.cam.get(cv2.CAP_PROP_FRAME_COUNT)) / self.fps
 
-    def shutdown(self, sig, frame):
+    def shutdown(self):
         self.stopSignal = True
         self.cam.release()
         self.framePoll.join()
@@ -54,24 +56,25 @@ class frameScanner:
         if self.mode is RunMode.LIVE:
             runTime = time.time() - self.startTime
             runFps = len(self.frameBuffer) / runTime
-            print(runFps)
+            print("Computed FPS: ", runFps)
             size = (self.width, self.height)
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             writer = cv2.VideoWriter(f"videos/capture_{self.timestamp}.mp4", fourcc, runFps, size)
+
+            print("Writing Video")
             for frame in self.frameBuffer:
                 writer.write(frame)
+            print("All done")
             writer.release()
             # self.detectionWriter.release()
-
-        sys.exit(0)
 
     def pollFrames(self):
         lastRead = time.time()
         while not self.stopSignal:
             ret, frame = self.cam.read()
-            # if random.randint(0, 50) < 1:
-            #     time.sleep(0.5)
-            #     continue
+            if random.randint(0, 50) < 1:
+                time.sleep(0.3)
+                continue
             self.hasFrame = ret
             if ret:
                 self.lastFrame = frame
@@ -85,7 +88,7 @@ class frameScanner:
     def writeFrames(self):
         lastWrite = time.time()
         while not self.stopSignal:
-            if self.lastFrame is not None:
+            if self.lastFrame is not None and self.readyToRecord:
                 eTime = time.time() - lastWrite
                 if eTime < self.frameTime:
                     time.sleep(self.frameTime - eTime)
@@ -117,13 +120,3 @@ class frameScanner:
             patience=patience,
             batch=batch,
         )
-
-
-fs = frameScanner(0, 'yolo11x', RunMode.LIVE, 'test')
-
-signal.signal(signal.SIGINT, fs.shutdown)
-
-while True:
-    ret, frame = fs.getFrame()
-    if ret:
-        fs.showFrame(frame)
