@@ -66,19 +66,20 @@ class frameScanner:
         sys.exit(0)
 
     def pollFrames(self):
+        lastRead = time.time()
         while not self.stopSignal:
-            startTime = time.time()
             ret, frame = self.cam.read()
-            if random.randint(0, 50) < 1:
-                time.sleep(0.5)
-                continue
+            # if random.randint(0, 50) < 1:
+            #     time.sleep(0.5)
+            #     continue
             self.hasFrame = ret
             if ret:
                 self.lastFrame = frame
                 if self.mode == RunMode.RECORDED:
-                    timeDif = time.time() - startTime
-                    if self.frameTime - timeDif > 0:
+                    timeDif = time.time() - lastRead
+                    if timeDif < self.frameTime:
                         time.sleep(self.frameTime - timeDif)
+                    lastRead = time.time()
         print("closing video stream")
 
     def writeFrames(self):
