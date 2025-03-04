@@ -1,6 +1,21 @@
 from dash import Dash, html, dcc, Input, Output, State
 import plotly.graph_objects as go
 import logging
+import numpy as np
+
+
+def buildGroups(hullSets):
+    layers = []
+    for hull in hullSets:
+        layer = dict(
+            sourcetype='geojson',
+            source={"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": hull}},
+            color='red',
+            type='line',
+            line=dict(width=1.5),
+        )
+        layers.append(layer)
+    return layers
 
 
 class dataVisualizer:
@@ -12,7 +27,7 @@ class dataVisualizer:
         log.setLevel(logging.ERROR)
         self.mapCenterLat = 42.062220
         self.mapCenterLon = -87.678361
-        scatter = self.buildScatter(self.analyzer.positions)
+        scatter = self.buildScatter(self.analyzer.positions, self.analyzer.hullSets)
         density = self.buildDensity(self.analyzer.positions)
 
         self.app = Dash()
@@ -33,7 +48,7 @@ class dataVisualizer:
             State('scatter-graph', 'figure'),
         )
         def update_scatter(n, figure):
-            scatter = self.buildScatter(self.analyzer.positions)
+            scatter = self.buildScatter(self.analyzer.positions, self.analyzer.hullSets)
             scatter.update_layout(map_center=figure['layout']['map']['center'])
             return scatter
 
@@ -47,7 +62,7 @@ class dataVisualizer:
             density.update_layout(map_center=figure['layout']['map']['center'])
             return density
 
-    def buildScatter(self, positions):
+    def buildScatter(self, positions, hulls):
         fig = go.Figure(
             go.Scattermap(
                 lat=positions['lat'],
@@ -58,14 +73,21 @@ class dataVisualizer:
             )
         )
 
-        fig.update_layout(map_style="open-street-map")
-        fig.update_layout(map_zoom=16)
-        fig.update_layout(map_center={"lat": self.mapCenterLat, "lon": self.mapCenterLon})
-        fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-        fig.update_layout(uirevision='scatter')
+        layers = buildGroups(hulls)
+
+        fig.update_layout(
+            map_style="open-street-map",
+            map_zoom=16,
+            map_center={"lat": self.mapCenterLat, "lon": self.mapCenterLon},
+            map_layers=layers,
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            uirevision='scatter',
+        )
+
         return fig
 
     def buildDensity(self, positions):
+        positions = positions[positions['type'] == 'car']
         fig = go.Figure(
             go.Densitymap(
                 lat=positions['lat'],

@@ -1,18 +1,18 @@
 from mavlinkManager import mavlinkManager
 from frameScanner import frameScanner
 import time
-import numpy as np
+from scipy.spatial import ConvexHull
 import math
 import threading
 import pandas as pd
 from utils import RunMode
-import cv2
 
 
 class analyzer:
     def __init__(self, timestamp, mode, videoStream):
         self.mode = mode
-        self.positions = pd.DataFrame({'id': [], 'lat': [], 'lon': [], 'alt': [], 'time': [], 'color': []})
+        self.positions = pd.DataFrame({'id': [], 'lat': [], 'lon': [], 'alt': [], 'time': [], 'color': [], 'type': []})
+        self.hullSets = []
         self.stopSignal = False
 
         # ./runs/detect/train7/weights/best.pt
@@ -43,6 +43,20 @@ class analyzer:
             )
         else:
             self.positions = pd.concat([self.positions, pd.DataFrame([row])], ignore_index=True)
+
+    def computeHulls(self):
+        justCars = self.positions[self.positions['type'] == 'car']
+        points = []
+        for _, row in justCars.iterrows():
+            points.append((row['lon'], row['lat']))
+
+        self.hullSets = []
+        if len(points) > 3:
+            hull = ConvexHull(points)
+            hullLines = []
+            for simplex in hull.simplices:
+                hullLines.append([points[simplex[0]], points[simplex[1]]])
+            self.hullSets = [hullLines]
 
     def analyzeLoop(self):
         dataTimeout = 0
@@ -87,8 +101,8 @@ class analyzer:
                 planeHeading = geoMsg['hdg'] / 100
                 planeTilt = attMsg['pitch']
 
-                # Remove detections older than 2 sec and update plane coords
-                self.positions = self.positions[self.positions['time'] > time.time() - 1]
+                # Remove detections older than 0.5 sec and update plane coords
+                self.positions = self.positions[self.positions['time'] > time.time() - 0.5]
                 planeUpdate = {
                     "id": "Plane",
                     "lat": planeLat,
@@ -105,6 +119,8 @@ class analyzer:
                 cameraPixelsize = 0.00000314814
                 cameraFocalLength = 0.0021
                 cameraTilt = 63 * (math.pi / 180)
+
+                maxDistance = 50  # in meters
 
                 totalTilt = cameraTilt + planeTilt
 
@@ -144,7 +160,14 @@ class analyzer:
 
                         # Positive value means shift up in camera POV
                         offsetXInPlaneFrame = ((cameraCenterY - objectY) * adjustedGSDH) + offsetCenterY
-                        # print("offset center ", offsetCenterY, " offset y ", ((cameraCenterY - objectY) * adjustedGSDH))
+
+                        # exclude values that are too far away as noise
+                        if offsetXInPlaneFrame > maxDistance:
+                            continue
+
+                        # exclude values when plane too low
+                        if altitude < 5:
+                            continue
 
                         # north is hdg value of 0/360, convert to normal radians with positive
                         # being counter clockwise
@@ -168,20 +191,6 @@ class analyzer:
                         else:
                             name = detection['name'] + str(i)
 
-                        # print(name)
-                        # print("objectX ", objectX)
-                        # print("objectY ", objectY)
-                        # print("offset center ", offsetCenterY)
-                        # print("scaling factor ", 1 / math.cos(totalAngle))
-                        # print("adjustedGSDW ", adjustedGSDW)
-                        # print("adjustedGSDH ", adjustedGSDH)
-                        # print("vertical offset ", verticalPhi * 180 / math.pi)
-                        # print("total angle", totalAngle * 180 / math.pi)
-                        # print("heading ", planeHeading)
-                        # print("rotation ", rotation)
-                        # print("offset plane y ", offsetYInPlaneFrame, " offset plane x", offsetXInPlaneFrame)
-                        # print("offset in lon ", worldXinMeters, " offset in lat ", worldYinMeters)
-                        # print()
                         if detection['name'] == 'person':
                             color = 'red'
                         if detection['name'] == 'car':
@@ -193,8 +202,12 @@ class analyzer:
                             "alt": 0.0,
                             "time": time.time(),
                             "color": color,
+                            "type": detection['name'],
                         }
                         self.updatePositions(detectionUpdate)
+
+                # after all detections are done in a frame cycle, compute hulls for groups
+                self.computeHulls()
 
             self.fsInterface.showFrame(frame)
             dataTimeout = 0
