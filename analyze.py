@@ -6,6 +6,7 @@ import math
 import threading
 import pandas as pd
 from utils import RunMode
+from sklearn.cluster import DBSCAN
 
 
 class analyzer:
@@ -45,18 +46,33 @@ class analyzer:
             self.positions = pd.concat([self.positions, pd.DataFrame([row])], ignore_index=True)
 
     def computeHulls(self):
+        self.hullSets = []
         justCars = self.positions[self.positions['type'] == 'car']
+
         points = []
         for _, row in justCars.iterrows():
             points.append((row['lon'], row['lat']))
 
-        self.hullSets = []
+        # Need several points in a class to do anything meaningful
         if len(points) > 3:
-            hull = ConvexHull(points)
-            hullLines = []
-            for simplex in hull.simplices:
-                hullLines.append([points[simplex[0]], points[simplex[1]]])
-            self.hullSets = [hullLines]
+            db = DBSCAN(eps=0.00029, min_samples=3).fit(points)
+
+            # ML Density Based grouping
+            groupedPoints = {}
+            for point, label in zip(points, db.labels_):
+                if label == -1:
+                    continue
+                if label not in groupedPoints:
+                    groupedPoints[label] = []  # Create a new list for this label if not already exists
+                groupedPoints[label].append(point)
+
+            # Find hull for each group of points
+            for label, subset in groupedPoints.items():
+                hull = ConvexHull(subset)
+                hullLines = []
+                for simplex in hull.simplices:
+                    hullLines.append([subset[simplex[0]], subset[simplex[1]]])
+                self.hullSets.append(hullLines)
 
     def analyzeLoop(self):
         dataTimeout = 0
