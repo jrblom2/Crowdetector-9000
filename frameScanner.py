@@ -4,7 +4,7 @@ from ultralytics import YOLO
 from utils import RunMode
 import time
 import threading
-import random
+import numpy as np
 
 
 class frameScanner:
@@ -35,7 +35,8 @@ class frameScanner:
 
         self.framePoll = threading.Thread(target=self.pollFrames)
         self.framePoll.start()
-        self.startTime = time.time()
+
+        self.startTime = None
 
         if self.mode is RunMode.LIVE:
             self.waitTime = 1
@@ -51,9 +52,9 @@ class frameScanner:
         self.stopSignal = True
         self.cam.release()
         self.framePoll.join()
-        self.frameWrite.join()
 
         if self.mode is RunMode.LIVE:
+            self.frameWrite.join()
             runTime = time.time() - self.startTime
             runFps = len(self.frameBuffer) / runTime
             print("Computed FPS: ", runFps)
@@ -72,9 +73,6 @@ class frameScanner:
         lastRead = time.time()
         while not self.stopSignal:
             ret, frame = self.cam.read()
-            if random.randint(0, 50) < 1:
-                time.sleep(0.3)
-                continue
             self.hasFrame = ret
             if ret:
                 self.lastFrame = frame
@@ -101,13 +99,26 @@ class frameScanner:
     def getIdentifiedFrame(self, frame):
         results = None
         detectionsFrame = None
-        results = self.model.track(frame, persist=True, verbose=False)
+        # only people and cars, can change as needed
+        results = self.model.track(frame, persist=True, verbose=False, classes=[0, 2])
         detectionsFrame = results[0].plot()
 
         # if self.mode is RunMode.LIVE:
         #     self.detectionWriter.write(detectionsFrame)
 
         return detectionsFrame, results
+
+    def rotateFrame(self, frame, roll):
+        roll_angle_degrees = roll * (180 / np.pi)
+
+        # Get the image dimensions
+        (h, w) = frame.shape[:2]
+
+        # Get the rotation matrix for the specified angle
+        rotation_matrix = cv2.getRotationMatrix2D((w / 2, h / 2), -roll_angle_degrees, 1)
+
+        # Apply the rotation
+        return cv2.warpAffine(frame, rotation_matrix, (w, h))
 
     def showFrame(self, frame):
         cv2.imshow('PlaneOfView', frame)

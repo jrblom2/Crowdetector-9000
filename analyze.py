@@ -6,15 +6,17 @@ import math
 import threading
 import pandas as pd
 from utils import RunMode
+import cv2
 
 
 class analyzer:
     def __init__(self, timestamp, mode, videoStream):
+        self.mode = mode
         self.positions = pd.DataFrame({'id': [], 'lat': [], 'lon': [], 'alt': [], 'time': [], 'color': []})
         self.stopSignal = False
 
         # ./runs/detect/train7/weights/best.pt
-        self.fsInterface = frameScanner(videoStream, 'yolo11x', mode, timestamp)
+        self.fsInterface = frameScanner(videoStream, 'yolo11n', mode, timestamp)
 
         videoDuration = 0.0
         if mode is RunMode.RECORDED:
@@ -59,13 +61,16 @@ class analyzer:
                 time.sleep(1)
                 continue
 
-            if not hasStartedRecord:
+            if not hasStartedRecord and self.mode == RunMode.LIVE:
                 self.mavlink.readyToRecord = True
                 self.fsInterface.readyToRecord = True
+                self.fsInterface.startTime = time.time()
                 print(f"Started recording at: {time.time()}")
                 hasStartedRecord = True
 
-            doDetect = False
+            # frame = self.fsInterface.rotateFrame(frame, attMsg['roll'])
+
+            doDetect = True
             if doDetect:
                 trimX1 = 250
                 trimX2 = 250
@@ -80,6 +85,7 @@ class analyzer:
                 planeLat = geoMsg["lat"] / 10000000
                 planeLon = geoMsg["lon"] / 10000000
                 planeHeading = geoMsg['hdg'] / 100
+                planeTilt = attMsg['pitch']
 
                 # Remove detections older than 2 sec and update plane coords
                 self.positions = self.positions[self.positions['time'] > time.time() - 1]
@@ -100,6 +106,8 @@ class analyzer:
                 cameraFocalLength = 0.0021
                 cameraTilt = 63 * (math.pi / 180)
 
+                totalTilt = cameraTilt + planeTilt
+
                 # Basic Ground sample distance, how far in M each pixel is
                 nadirGSDH = (altitude * cameraSensorH) / (cameraFocalLength * self.fsInterface.height)
                 nadirGSDW = (altitude * cameraSensorW) / (cameraFocalLength * self.fsInterface.width)
@@ -119,7 +127,7 @@ class analyzer:
                         tanPhi = cameraPixelsize * ((objectY - cameraCenterY) / cameraFocalLength)
                         verticalPhi = math.atan(tanPhi)
 
-                        totalAngle = cameraTilt - verticalPhi
+                        totalAngle = totalTilt - verticalPhi
 
                         # sanity check if past 90 degrees
                         if totalAngle > 1.57:
@@ -129,7 +137,7 @@ class analyzer:
                         adjustedGSDW = nadirGSDW * (1 / math.cos(totalAngle))
 
                         # Distance camera center is projected forward
-                        offsetCenterY = math.tan(cameraTilt) * altitude
+                        offsetCenterY = math.tan(totalTilt) * altitude
 
                         # Positive value means shift left from camera POV
                         offsetYInPlaneFrame = (cameraCenterX - objectX) * adjustedGSDW
