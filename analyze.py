@@ -134,7 +134,7 @@ class analyzer:
                     "lon": planeLon,
                     "alt": altitude,
                     "time": time.time(),
-                    'color': 'blue',
+                    'color': 'green',
                 }
                 self.updatePositions(planeUpdate)
 
@@ -218,7 +218,7 @@ class analyzer:
                         if detection['name'] == 'person':
                             color = 'red'
                         if detection['name'] == 'car':
-                            color = 'green'
+                            color = 'blue'
                         detectionUpdate = {
                             "id": name,
                             "lat": objectLat,

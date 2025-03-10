@@ -36,9 +36,7 @@ class dataVisualizer:
 
         self.app = Dash()
         self.app.layout = [
-            html.Div(children='Crowds'),
             dcc.Graph(id='scatter-graph', figure=scatter),
-            html.Div(children='Density'),
             dcc.Graph(id='density-graph', figure=density),
             dcc.Interval(id='interval', interval=100),
         ]
@@ -81,7 +79,7 @@ class dataVisualizer:
 
         fig.update_layout(
             map_style="open-street-map",
-            map_zoom=16,
+            map_zoom=17,
             map_center={"lat": self.mapCenterLat, "lon": self.mapCenterLon},
             map_layers=layers,
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
@@ -91,19 +89,24 @@ class dataVisualizer:
         return fig
 
     def buildDensity(self, positions):
-        positions = positions[positions['type'] == 'car']
-        fig = go.Figure(
-            go.Densitymap(
-                lat=positions['lat'],
-                lon=positions['lon'],
-                radius=10,
-                colorscale='Viridis',
+        fig = go.Figure()
+        for i, type in enumerate(self.config['analyze']['detections']):
+            filter = positions[positions['type'] == type]
+            fig.add_trace(
+                go.Densitymap(
+                    lat=filter['lat'],
+                    lon=filter['lon'],
+                    radius=10,
+                    colorscale=self.config['analyze']['colors'][i],
+                    reversescale=True,
+                    showlegend=False,
+                    showscale=False,
+                )
             )
-        )
 
         fig.update_layout(
-            map_style="open-street-map",
-            map_zoom=16,
+            map_style="satellite-streets",
+            map_zoom=15.8,
             map_center={"lat": self.mapCenterLat, "lon": self.mapCenterLon},
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
             uirevision='density',
