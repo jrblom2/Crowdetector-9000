@@ -7,11 +7,11 @@ camera:
   cameraSensorH: 0.00340
   cameraPixelsize: 0.00000314814
   cameraFocalLength: 0.0021
-  cameraTilt: 70 #degrees
-  useCalib: True
-  trimX1: 50
-  trimX2: 50
-  trimY1: 0
+  cameraTilt: 63 #degrees
+  useCalib: False
+  trimX1: 250
+  trimX2: 250
+  trimY1: 100
   trimY2: 100
 
 map:
@@ -32,7 +32,7 @@ analyze:
   maxAngle: 1.57 #radians
   cleanData: True
   maxDistance: 50 #meters
-  minHeight: 5 #meters
+  minHeight: 3 #meters
 
 
 groups:
