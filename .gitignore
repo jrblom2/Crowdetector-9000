@@ -3,5 +3,6 @@ datasets/
 runs/
 videos/
 mavdumps/
+cameracalibrator/
 yolo11*
 __pycache__

@@ -6,8 +6,8 @@ This project uses aerial footage gathered live from either a drone or a plane (o
 ## Quickstart
 
 1. Running the main.py file will run the app in live mode, where it will look for a camera on device 2 and availalbe mavlink data. When run this way, the camera stream as well as the mavlink data will be saved to a dump file for later playack and offline analysis. 
-2. An input mavdata file can be provided along with a recorded mp4 video to perform the analysis offline.
-3. In either case, the results are served as the video is streamed through the system on a local web server serving a map at `127.0.0.1:8050`
+2. The project can be run in a recorded mode by passing the timestamp of a recorded video and mav file.
+3. In either case, the results are served on a local web server hosting maps at `127.0.0.1:8050`
 
 ## System Overview
 

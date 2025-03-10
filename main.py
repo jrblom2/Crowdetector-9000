@@ -1,11 +1,12 @@
-from analyze import analyzer
-from dataManager import dataVisualizer
-from utils import RunMode
 import argparse
+import datetime
 import signal
 import sys
 import time
-import datetime
+
+from analyze import analyzer
+from dataManager import dataVisualizer
+from utils import RunMode
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

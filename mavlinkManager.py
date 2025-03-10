@@ -1,8 +1,11 @@
-from pymavlink import mavutil
-from utils import RunMode
 import json
-import time
 import threading
+import time
+
+import yaml
+from pymavlink import mavutil
+
+from utils import RunMode
 
 geoJsonKeys = [
     '_type',
@@ -33,10 +36,13 @@ attJsonKeys = [
 
 class mavlinkManager:
 
-    def __init__(self, port, mode, timestamp, videoDuration):
+    def __init__(self, mode, timestamp, videoDuration):
+        with open("config.yaml", "r") as f:
+            self.config = yaml.safe_load(f)
+
         self.stopSignal = False
         # Set up connection to vehicle
-        self.connection = mavutil.mavlink_connection(f'udp:localhost:{port}')
+        self.connection = mavutil.mavlink_connection(f'udp:localhost:{self.config['mavLink']['port']}')
 
         self.runMode = mode
 

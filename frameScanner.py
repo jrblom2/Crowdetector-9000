@@ -1,21 +1,25 @@
-import cv2
-
-from ultralytics import YOLO
-from utils import RunMode
-import time
 import threading
+import time
+
+import cv2
 import numpy as np
+import yaml
+from ultralytics import YOLO
+
+from utils import RunMode
 
 
 class frameScanner:
 
-    def __init__(self, video, yoloModel, mode, timestamp):
+    def __init__(self, video, mode, timestamp):
+        with open("config.yaml", "r") as f:
+            self.config = yaml.safe_load(f)
         self.stopSignal = False
         self.timestamp = timestamp
 
         self.cam = cv2.VideoCapture(video)
-        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.config['camera']['width'])
+        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config['camera']['height'])
 
         self.width = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -31,7 +35,7 @@ class frameScanner:
         self.mode = mode
         print("Size is: ", self.width, " x ", self.height)
 
-        self.model = YOLO(yoloModel)
+        self.model = YOLO(self.config['camera']['model'])
 
         self.framePoll = threading.Thread(target=self.pollFrames)
         self.framePoll.start()
@@ -40,7 +44,6 @@ class frameScanner:
 
         if self.mode is RunMode.LIVE:
             self.waitTime = 1
-            # self.detectionWriter = cv2.VideoWriter(f"videos/detections_{timestamp}.mp4", fourcc, self.fps, size)
             self.frameBuffer = []
             self.readyToRecord = False
             self.frameWrite = threading.Thread(target=self.writeFrames)
@@ -67,7 +70,6 @@ class frameScanner:
                 writer.write(frame)
             print("All done")
             writer.release()
-            # self.detectionWriter.release()
 
     def pollFrames(self):
         lastRead = time.time()
@@ -100,11 +102,8 @@ class frameScanner:
         results = None
         detectionsFrame = None
         # only people and cars, can change as needed
-        results = self.model.track(frame, persist=True, verbose=False, classes=[0, 2])
+        results = self.model.track(frame, persist=True, verbose=False, classes=self.config['analyze']['classes'])
         detectionsFrame = results[0].plot()
-
-        # if self.mode is RunMode.LIVE:
-        #     self.detectionWriter.write(detectionsFrame)
 
         return detectionsFrame, results
 

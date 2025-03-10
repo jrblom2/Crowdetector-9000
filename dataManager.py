@@ -1,7 +1,8 @@
-from dash import Dash, html, dcc, Input, Output, State
-import plotly.graph_objects as go
 import logging
-import numpy as np
+
+import plotly.graph_objects as go
+import yaml
+from dash import Dash, Input, Output, State, dcc, html
 
 
 def buildGroups(hullSets):
@@ -23,10 +24,13 @@ class dataVisualizer:
     def __init__(self, analyzer):
 
         self.analyzer = analyzer
+        with open("config.yaml", "r") as f:
+            self.config = yaml.safe_load(f)
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
-        self.mapCenterLat = 42.062220
-        self.mapCenterLon = -87.678361
+
+        self.mapCenterLat = self.config['map']['centerLat']
+        self.mapCenterLon = self.config['map']['centerLon']
         scatter = self.buildScatter(self.analyzer.positions, self.analyzer.hullSets)
         density = self.buildDensity(self.analyzer.positions)
 
@@ -92,10 +96,8 @@ class dataVisualizer:
             go.Densitymap(
                 lat=positions['lat'],
                 lon=positions['lon'],
-                # z=positions['color'],  # You can choose a variable to represent intensity (e.g., 'color')
-                radius=10,  # You can adjust the radius of influence for each point
-                colorscale='Viridis',  # You can customize the color scale
-                # colorbar=dict(title="Density"),  # Add a color bar if desired
+                radius=10,
+                colorscale='Viridis',
             )
         )
 
