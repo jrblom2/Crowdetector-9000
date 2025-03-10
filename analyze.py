@@ -16,6 +16,7 @@ class analyzer:
     def __init__(self, timestamp, mode, videoStream):
         with open("config.yaml", "r") as f:
             self.config = yaml.safe_load(f)
+
         self.mode = mode
         self.positions = pd.DataFrame({'id': [], 'lat': [], 'lon': [], 'alt': [], 'time': [], 'color': [], 'type': []})
         self.hullSets = []
@@ -86,7 +87,7 @@ class analyzer:
         hasStartedRecord = False
         while dataTimeout < self.config['analyze']['waitTime'] and not self.stopSignal:
             # Get camera data
-            ret, frame = self.fsInterface.getFrame()
+            ret, frame, fwidth, fheight = self.fsInterface.getFrame()
 
             # Where are we?
             geoMsg = self.mavlink.getGEO()
@@ -105,7 +106,7 @@ class analyzer:
                 print(f"Started recording at: {time.time()}")
                 hasStartedRecord = True
 
-            frame = self.fsInterface.rotateFrame(frame, attMsg['roll'])
+            # frame = self.fsInterface.rotateFrame(frame, attMsg['roll'])
 
             if self.config['analyze']['doDetections']:
                 trimX1 = self.config['camera']['trimX1']
@@ -113,14 +114,14 @@ class analyzer:
                 trimY1 = self.config['camera']['trimY1']
                 trimY2 = self.config['camera']['trimY2']
 
-                frame = frame[trimY1 : self.fsInterface.height - trimY2, trimX1 : self.fsInterface.width - trimX2]
+                frame = frame[trimY1 : fheight - trimY2, trimX1 : fwidth - trimX2]
                 frame, results = self.fsInterface.getIdentifiedFrame(frame)
                 detectionData = results[0].summary()
 
                 altitude = geoMsg["relative_alt"] / 1000
                 planeLat = geoMsg["lat"] / 10000000
                 planeLon = geoMsg["lon"] / 10000000
-                planeHeading = geoMsg['hdg'] / 100
+                planeHeading = geoMsg['hdg'] / 100 - self.config['analyze']['gpsMount']
                 planeTilt = attMsg['pitch']
 
                 # Remove detections older than 0.5 sec and update plane coords
@@ -147,11 +148,11 @@ class analyzer:
                 totalTilt = cameraTilt + planeTilt
 
                 # Basic Ground sample distance, how far in M each pixel is
-                nadirGSDH = (altitude * cameraSensorH) / (cameraFocalLength * self.fsInterface.height)
-                nadirGSDW = (altitude * cameraSensorW) / (cameraFocalLength * self.fsInterface.width)
+                nadirGSDH = (altitude * cameraSensorH) / (cameraFocalLength * self.config['camera']['height'])
+                nadirGSDW = (altitude * cameraSensorW) / (cameraFocalLength * self.config['camera']['width'])
 
-                cameraCenterX = self.fsInterface.width / 2
-                cameraCenterY = self.fsInterface.height / 2
+                cameraCenterX = fwidth / 2
+                cameraCenterY = fheight / 2
 
                 for i, detection in enumerate(detectionData):
                     # Camera is at a tilt from the ground, so GSD needs to be scaled

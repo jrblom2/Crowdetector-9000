@@ -7,10 +7,11 @@ camera:
   cameraSensorH: 0.00340
   cameraPixelsize: 0.00000314814
   cameraFocalLength: 0.0021
-  cameraTilt: 63 #degrees
-  trimX1: 250
-  trimX2: 250
-  trimY1: 100
+  cameraTilt: 74 #degrees
+  useCalib: True
+  trimX1: 50
+  trimX2: 50
+  trimY1: 0
   trimY2: 100
 
 map:
@@ -26,6 +27,7 @@ analyze:
   classes: [0, 2] #make sure this corresponds to detections
   waitTime: 5 #seconds
   dataTimeout: 0.5 #seconds
+  gpsMount: 12.0 #degrees
   maxAngle: 1.57 #radians
   cleanData: True
   maxDistance: 50 #meters

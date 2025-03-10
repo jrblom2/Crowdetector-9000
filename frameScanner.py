@@ -1,3 +1,4 @@
+import pickle
 import threading
 import time
 
@@ -14,6 +15,10 @@ class frameScanner:
     def __init__(self, video, mode, timestamp):
         with open("config.yaml", "r") as f:
             self.config = yaml.safe_load(f)
+
+        with open('cameraCalibration', 'rb') as f:
+            self.camcalib = pickle.load(f)
+
         self.stopSignal = False
         self.timestamp = timestamp
 
@@ -23,10 +28,14 @@ class frameScanner:
 
         self.width = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        self.fwidth = 0
+        self.fheight = 0
         self.fps = self.cam.get(cv2.CAP_PROP_FPS)
 
         self.frameTime = 1.0 / self.fps
         self.lastFrame = None
+        self.lastDst = None
         self.hasFrame = False
         print("FPS is: ", self.fps)
 
@@ -72,12 +81,36 @@ class frameScanner:
             writer.release()
 
     def pollFrames(self):
+        # setup
         lastRead = time.time()
+        w = self.config['camera']['width']
+        h = self.config['camera']['height']
+
+        if self.config['camera']['useCalib']:
+            mtx = self.camcalib['mtx']
+            dist = self.camcalib['dist']
+            newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+            x, y, w, h = roi
+        self.fwidth = w
+        self.fheight = h
+
+        # Get frames in loop
         while not self.stopSignal:
             ret, frame = self.cam.read()
             self.hasFrame = ret
             if ret:
                 self.lastFrame = frame
+                if self.config['camera']['useCalib']:
+                    # undistort
+                    dst = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+
+                    # crop the image
+                    dst = dst[y : y + h, x : x + w]
+                    self.lastDst = dst
+                else:
+                    self.lastDst = frame
+
+                # Sleep until next frame
                 if self.mode == RunMode.RECORDED:
                     timeDif = time.time() - lastRead
                     if timeDif < self.frameTime:
@@ -96,7 +129,7 @@ class frameScanner:
                 lastWrite = time.time()
 
     def getFrame(self):
-        return self.hasFrame, self.lastFrame
+        return self.hasFrame, self.lastDst, self.fwidth, self.fheight
 
     def getIdentifiedFrame(self, frame):
         results = None
