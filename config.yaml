@@ -25,13 +25,14 @@ analyze:
   doDetections: True
   detections: ['car', 'person'] #which objects to detect
   classes: [0, 2] #make sure this corresponds to detections
-  colors: ['blues', 'reds']
+  scatterColors: ['blue', 'red']
+  denColors: ['blues', 'reds']
   waitTime: 5 #seconds
   dataTimeout: 0.5 #seconds
   gpsMount: 12.0 #degrees
   maxAngle: 1.57 #radians
   cleanData: True
-  maxDistance: 50 #meters
+  maxDistance: 60 #meters
   minHeight: 3 #meters
 
 

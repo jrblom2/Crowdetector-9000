@@ -97,7 +97,7 @@ class dataVisualizer:
                     lat=filter['lat'],
                     lon=filter['lon'],
                     radius=8,
-                    colorscale=self.config['analyze']['colors'][i],
+                    colorscale=self.config['analyze']['denColors'][i],
                     reversescale=True,
                     showlegend=False,
                     showscale=False,

@@ -236,10 +236,10 @@ class analyzer:
                             else:
                                 name = detection['name'] + str(i)
 
-                            if detection['name'] == 'person':
-                                color = 'red'
-                            if detection['name'] == 'car':
-                                color = 'blue'
+                            for i, type in enumerate(self.config['analyze']['detections']):
+                                if detection['name'] == type:
+                                    color = self.config['analyze']['scatterColors'][i]
+
                             detectionUpdate = {
                                 "id": name,
                                 "lat": objectLat,
