@@ -134,7 +134,7 @@ class analyzer:
                 altitude = geoMsg["relative_alt"] / 1000
                 planeLat = geoMsg["lat"] / 10000000
                 planeLon = geoMsg["lon"] / 10000000
-                planeYaw = attMsg['yaw'] - self.config['analyze']['gpsMount'] * math.pi / 180
+                planeHeading = geoMsg['hdg'] / 100 - self.config['analyze']['gpsMount']
                 planeTilt = attMsg['pitch']
 
                 # Remove detections older than 0.5 sec and update plane coords
@@ -207,7 +207,7 @@ class analyzer:
 
                             if self.config['analyze']['cleanData']:
                                 # exclude values that are too far away as noise
-                                if offsetXInPlaneFrame > self.config['analyze']['maxDistance']:
+                                if abs(offsetXInPlaneFrame) > self.config['analyze']['maxDistance']:
                                     continue
 
                                 # exclude values when plane too low
@@ -216,8 +216,7 @@ class analyzer:
 
                             # north is hdg value of 0/360, convert to normal radians with positive
                             # being counter clockwise
-                            rotation = math.pi / 2 - planeYaw
-                            print(rotation * 180 / math.pi)
+                            rotation = (90 - planeHeading) * (math.pi / 180)
 
                             # Plane is rotated around world frame by heading, so rotate camera detection back
                             worldXinMeters = offsetXInPlaneFrame * math.cos(rotation) - offsetYInPlaneFrame * math.sin(
@@ -228,7 +227,7 @@ class analyzer:
                             )
 
                             # Simple meters to lat/lon, can be improved. 1 degree is about 111111 meters
-                            objectLon = planeLon + (worldXinMeters * (1 / 111111 * math.cos(planeLat * math.pi / 180)))
+                            objectLon = planeLon + (worldXinMeters * (1 / 111111.0))
                             objectLat = planeLat + (worldYinMeters * (1 / 111111.0))
 
                             # update

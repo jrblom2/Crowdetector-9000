@@ -96,7 +96,7 @@ class dataVisualizer:
                 go.Densitymap(
                     lat=filter['lat'],
                     lon=filter['lon'],
-                    radius=10,
+                    radius=8,
                     colorscale=self.config['analyze']['colors'][i],
                     reversescale=True,
                     showlegend=False,
