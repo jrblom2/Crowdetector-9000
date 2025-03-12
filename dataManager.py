@@ -60,7 +60,7 @@ class dataVisualizer:
             State('density-graph', 'figure'),
         )
         def update_density(n, figure):
-            density = self.buildDensity(self.analyzer.positions)
+            density = self.buildDensity(self.analyzer.positionsLong)
             density.update_layout(map_center=figure['layout']['map']['center'])
             return density
 
