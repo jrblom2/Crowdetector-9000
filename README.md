@@ -1,4 +1,4 @@
-# Crowdutron-9000
+# Crowdotron-9000
 
 This project uses aerial footage gathered live from either a drone or a plane (or an aerial platform that can transmit mavlink data) to perform object detection and crowd estimation.
 
