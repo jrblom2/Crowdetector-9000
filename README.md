@@ -2,7 +2,7 @@
 
 This project uses aerial footage gathered live from either a drone or a plane (or an aerial platform that can transmit mavlink data) to perform object detection and crowd estimation.
 
-[Portfolio Link](https://jrblom2.github.io/crowd/){:target="_blank"}
+[Portfolio Link](https://jrblom2.github.io/crowd/)
 
 
 ## Requirments
